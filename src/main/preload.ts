@@ -72,6 +72,13 @@ contextBridge.exposeInMainWorld('kovanAPI', {
       }
     });
   },
+
+  // Pencere kontrolleri
+  window: {
+    minimize: () => ipcRenderer.invoke('window:minimize'),
+    maximize: () => ipcRenderer.invoke('window:maximize'),
+    close: () => ipcRenderer.invoke('window:close'),
+  },
 });
 
 // TypeScript için global type tanımları
@@ -110,6 +117,11 @@ declare global {
       file: {
         selectDirectory: () => Promise<string | null>;
         selectFile: (options?: any) => Promise<string | null>;
+      };
+      window: {
+        minimize: () => Promise<any>;
+        maximize: () => Promise<any>;
+        close: () => Promise<any>;
       };
       on: (channel: string, callback: Function) => void;
       off: (channel: string) => void;

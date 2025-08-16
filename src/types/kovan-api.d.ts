@@ -36,6 +36,14 @@ declare global {
         selectDirectory(): Promise<string | null>;
         selectFile(options?: { filters?: any[] }): Promise<string | null>;
       };
+      window: {
+        minimize(): Promise<any>;
+        maximize(): Promise<any>;
+        close(): Promise<any>;
+      };
+      on(channel: string, callback: Function): void;
+      off(channel: string): void;
+      setupConsoleLogs(): void;
     };
   }
 }

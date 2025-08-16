@@ -4,17 +4,20 @@ import * as fs from "fs";
 import { ServiceManager } from "./services/ServiceManager";
 import { ProjectManager } from "./services/ProjectManager";
 import { PluginManager } from "./services/PluginManager";
+import { DatabaseManager } from "./services/DatabaseManager"; //@ts-ignore
 
 class KovanApp {
   private mainWindow: BrowserWindow | null = null;
   private serviceManager: ServiceManager;
   private projectManager: ProjectManager;
   private pluginManager: PluginManager;
+  private databaseManager: DatabaseManager;
 
   constructor() {
     this.serviceManager = new ServiceManager();
     this.projectManager = new ProjectManager();
     this.pluginManager = new PluginManager();
+    this.databaseManager = new DatabaseManager();
 
     this.initializeApp();
   }
@@ -45,6 +48,11 @@ class KovanApp {
     app.on("quit", () => {
       // Tüm servisleri zorla durdur
       this.forceStopAllServices();
+      
+      // Veritabanını kapat
+      if (this.databaseManager) {
+        this.databaseManager.close();
+      }
     });
 
     app.on("activate", () => {
@@ -67,9 +75,14 @@ class KovanApp {
         preload: path.join(__dirname, "preload.js"),
       },
       icon: path.join(__dirname, "../../assets/icon.png"),
-      titleBarStyle: "default",
+      titleBarStyle: "hidden",
+      frame: false,
+      transparent: true,
       show: false,
     });
+
+    // Ayarları yükle ve başlangıçta simge durumunda küçültme ayarını uygula
+    this.loadStartupSettings();
 
     // Development modunda Vite dev server'ı kullan
     this.mainWindow.loadURL("http://localhost:3001");
@@ -189,6 +202,8 @@ class KovanApp {
   }
 
   private setupIPC(): void {
+    console.log('🔧 IPC handlers kuruluyor...');
+    
     // Servis yönetimi
     ipcMain.handle("services:start", async (event, serviceName: string) => {
       return await this.serviceManager.startService(serviceName);
@@ -212,14 +227,6 @@ class KovanApp {
 
     ipcMain.handle("services:download", async (event, serviceName: string) => {
       return await this.serviceManager.downloadService(serviceName);
-    });
-
-    ipcMain.handle("services:install", async (event, serviceName: string, installerPath: string) => {
-      return await this.serviceManager.installService(serviceName, installerPath);
-    });
-
-    ipcMain.handle("services:updatePort", async (event, serviceName: string, newPort: number) => {
-      return await this.serviceManager.updateServicePort(serviceName, newPort);
     });
 
     ipcMain.handle("services:install", async (event, serviceName: string, installerPath: string) => {
@@ -277,6 +284,7 @@ class KovanApp {
     });
 
     // Sistem bilgileri
+    console.log('🔧 system:info handler kuruluyor...');
     ipcMain.handle("system:info", async () => {
       const os = require("os");
       const { exec } = require("child_process");
@@ -371,7 +379,6 @@ class KovanApp {
           electronVersion: process.versions.electron,
         };
 
-        console.log("Sistem bilgileri:", result);
         return result;
       } catch (error) {
         console.error("Sistem bilgileri alınamadı:", error);
@@ -389,15 +396,14 @@ class KovanApp {
       }
     });
 
+    console.log('✅ IPC handlers kuruldu');
+
     // Ayarlar yönetimi
     ipcMain.handle("settings:get", async () => {
-      const settingsPath = path.join(app.getPath("userData"), "settings.json");
       try {
-        if (fs.existsSync(settingsPath)) {
-          const data = fs.readFileSync(settingsPath, "utf8");
-          return JSON.parse(data);
-        }
-        return this.getDefaultSettings();
+        const settings = this.databaseManager.getSettings();
+        console.log("SQLite'dan yüklenen ayarlar:", settings);
+        return settings;
       } catch (error) {
         console.error("Ayarlar yüklenirken hata:", error);
         return this.getDefaultSettings();
@@ -405,10 +411,25 @@ class KovanApp {
     });
 
     ipcMain.handle("settings:save", async (event, settings: any) => {
-      const settingsPath = path.join(app.getPath("userData"), "settings.json");
+      console.log("Ayarlar SQLite'a kaydediliyor:", settings);
       try {
-        fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2));
-        return { success: true };
+        const success = this.databaseManager.saveSettings(settings);
+        
+        if (success) {
+          console.log("Ayarlar başarıyla SQLite'a kaydedildi");
+          
+          // Windows başlangıcında otomatik başlatma ayarını uygula
+          if (process.platform === 'win32') {
+            await this.updateAutoStartSetting(settings.general.autoStart);
+          }
+          
+          return { success: true };
+        } else {
+          return {
+            success: false,
+            error: "Ayarlar kaydedilemedi"
+          };
+        }
       } catch (error) {
         console.error("Ayarlar kaydedilirken hata:", error);
         return {
@@ -432,6 +453,37 @@ class KovanApp {
         filters: options?.filters || [],
       });
       return result.canceled ? null : result.filePaths[0];
+    });
+
+    // Veritabanı işlemleri
+    ipcMain.handle("database:backup", async (event, backupPath: string) => {
+      try {
+        const success = this.databaseManager.backup(backupPath);
+        return { success };
+      } catch (error) {
+        console.error("Veritabanı yedekleme hatası:", error);
+        return { success: false, error: error instanceof Error ? error.message : String(error) };
+      }
+    });
+
+    // Pencere kontrolleri
+    ipcMain.handle('window:minimize', () => {
+      this.mainWindow?.minimize();
+      return true;
+    });
+
+    ipcMain.handle('window:maximize', () => {
+      if (this.mainWindow?.isMaximized()) {
+        this.mainWindow?.unmaximize();
+      } else {
+        this.mainWindow?.maximize();
+      }
+      return true;
+    });
+
+    ipcMain.handle('window:close', () => {
+      this.handleAppQuit();
+      return true;
     });
   }
 
@@ -483,7 +535,7 @@ class KovanApp {
       },
       appearance: {
         theme: "dark",
-        accentColor: "#667eea",
+        accentColor: "#f59e0b",
         compactMode: false,
       },
       development: {
@@ -492,6 +544,45 @@ class KovanApp {
         enableHotReload: true,
       },
     };
+  }
+
+  private async updateAutoStartSetting(enabled: boolean): Promise<void> {
+    try {
+      const { exec } = require('child_process');
+      const { promisify } = require('util');
+      const execAsync = promisify(exec);
+
+      if (enabled) {
+        // Windows başlangıcına ekle
+        const appPath = process.execPath;
+        const appName = app.getName();
+        
+        await execAsync(`reg add "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run" /v "${appName}" /t REG_SZ /d "${appPath}" /f`);
+        console.log('✅ Uygulama Windows başlangıcına eklendi');
+      } else {
+        // Windows başlangıcından kaldır
+        const appName = app.getName();
+        
+        await execAsync(`reg delete "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run" /v "${appName}" /f`);
+        console.log('✅ Uygulama Windows başlangıcından kaldırıldı');
+      }
+    } catch (error) {
+      console.error('❌ Windows başlangıç ayarı güncellenirken hata:', error);
+    }
+  }
+
+  private async loadStartupSettings(): Promise<void> {
+    try {
+      const settings = this.databaseManager.getSettings();
+      
+      // Başlangıçta simge durumunda küçültme ayarını uygula
+      if (settings.general?.startMinimized) {
+        console.log('📱 Uygulama simge durumunda başlatılıyor');
+        this.mainWindow?.minimize();
+      }
+    } catch (error) {
+      console.error('❌ Başlangıç ayarları yüklenirken hata:', error);
+    }
   }
 
   private setupAppEvents(): void {
@@ -508,7 +599,6 @@ class KovanApp {
       nodeVersion: process.version,
       electronVersion: process.versions.electron,
     };
-    console.log("Sistem bilgileri:", systemInfo);
   }
 
   private async handleAppQuit(): Promise<void> {

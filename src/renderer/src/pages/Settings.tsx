@@ -43,6 +43,50 @@ interface Settings {
 }
 
 const Settings: React.FC = () => {
+  // Önceden tanımlanmış renkler
+  const predefinedColors = [
+    { name: 'Ocean Blue', value: '#0ea5e9' },
+    { name: 'Purple Haze', value: '#8b5cf6' },
+    { name: 'Emerald Green', value: '#10b981' },
+    { name: 'Sunset Orange', value: '#f97316' },
+    { name: 'Rose Pink', value: '#ec4899' },
+    { name: 'Teal Blue', value: '#14b8a6' },
+    { name: 'Amber Gold', value: '#f59e0b' },
+    { name: 'Violet Purple', value: '#7c3aed' },
+    { name: 'Sky Blue', value: '#06b6d4' },
+    { name: 'Lime Green', value: '#84cc16' },
+    { name: 'Coral Red', value: '#f43f5e' },
+    { name: 'Indigo Blue', value: '#6366f1' }
+  ];
+
+  const [originalSettings, setOriginalSettings] = useState<Settings>({
+    general: {
+      autoStart: false,
+      startMinimized: false,
+      checkUpdates: true,
+      language: 'tr'
+    },
+    services: {
+      autoStartServices: false,
+      defaultPorts: {
+        apache: 80,
+        nginx: 80,
+        mysql: 3306,
+        postgresql: 5432,
+        redis: 6379
+      }
+    },
+    appearance: {
+      theme: 'dark',
+      accentColor: '#667eea',
+      compactMode: false
+    },
+    development: {
+      defaultProjectPath: '',
+      autoDetectFrameworks: true,
+      enableHotReload: true
+    }
+  });
   const [settings, setSettings] = useState<Settings>({
     general: {
       autoStart: false,
@@ -74,6 +118,7 @@ const Settings: React.FC = () => {
   const [installedServices, setInstalledServices] = useState<ServiceConfig[]>([]);
   const [activeTab, setActiveTab] = useState('general');
   const [saving, setSaving] = useState(false);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
   useEffect(() => {
     loadSettings();
@@ -82,8 +127,12 @@ const Settings: React.FC = () => {
 
   const loadSettings = async () => {
     try {
+      console.log('Ayarlar yükleniyor...');
       const savedSettings = await window.kovanAPI.settings.get();
+      console.log('Yüklenen ayarlar:', savedSettings);
+      setOriginalSettings(savedSettings);
       setSettings(savedSettings);
+      setHasUnsavedChanges(false);
     } catch (error) {
       console.error('Ayarlar yüklenirken hata:', error);
     }
@@ -102,9 +151,15 @@ const Settings: React.FC = () => {
   const saveSettings = async () => {
     setSaving(true);
     try {
+      console.log('Ayarlar kaydediliyor:', settings);
       const result = await window.kovanAPI.settings.save(settings);
+      console.log('Kaydetme sonucu:', result);
       if (result.success) {
         console.log('Ayarlar başarıyla kaydedildi');
+        setOriginalSettings(settings);
+        setHasUnsavedChanges(false);
+        // Başarı mesajını göster (alert yerine daha iyi bir bildirim sistemi)
+        showSuccessMessage('Ayarlar başarıyla kaydedildi!');
       } else {
         console.error('Ayarlar kaydedilirken hata:', result.error);
         alert('Ayarlar kaydedilirken hata oluştu: ' + result.error);
@@ -116,6 +171,111 @@ const Settings: React.FC = () => {
       setSaving(false);
     }
   };
+
+  const discardChanges = () => {
+    setSettings(originalSettings);
+    setHasUnsavedChanges(false);
+  };
+
+  const resetToDefaults = () => {
+    const defaultSettings: Settings = {
+      general: {
+        autoStart: false,
+        startMinimized: false,
+        checkUpdates: true,
+        language: 'tr'
+      },
+      services: {
+        autoStartServices: false,
+        defaultPorts: {
+          apache: 80,
+          nginx: 80,
+          mysql: 3306,
+          postgresql: 5432,
+          redis: 6379
+        }
+      },
+      appearance: {
+        theme: 'dark',
+        accentColor: '#f59e0b',
+        compactMode: false
+      },
+      development: {
+        defaultProjectPath: '',
+        autoDetectFrameworks: true,
+        enableHotReload: true
+      }
+    };
+    setSettings(defaultSettings);
+    setHasUnsavedChanges(true);
+  };
+
+  const checkUnsavedChanges = () => {
+    // Daha detaylı karşılaştırma yap
+    const settingsStr = JSON.stringify(settings);
+    const originalStr = JSON.stringify(originalSettings);
+    const hasChanges = settingsStr !== originalStr;
+    
+    console.log('Değişiklik kontrolü:', {
+      hasChanges,
+      settings: settingsStr,
+      original: originalStr
+    });
+    
+    return hasChanges;
+  };
+
+  const showSuccessMessage = (message: string) => {
+    // Basit bir başarı mesajı göster
+    const successDiv = document.createElement('div');
+    successDiv.style.cssText = `
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: var(--color-success);
+      color: white;
+      padding: 12px 20px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 500;
+      z-index: 9999;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      animation: slideIn 0.3s ease;
+    `;
+    successDiv.textContent = message;
+    document.body.appendChild(successDiv);
+
+    // 3 saniye sonra kaldır
+    setTimeout(() => {
+      successDiv.style.animation = 'slideOut 0.3s ease';
+      setTimeout(() => {
+        if (successDiv.parentNode) {
+          successDiv.parentNode.removeChild(successDiv);
+        }
+      }, 300);
+    }, 3000);
+  };
+
+  // Değişiklikleri kontrol et
+  useEffect(() => {
+    const hasChanges = checkUnsavedChanges();
+    setHasUnsavedChanges(hasChanges);
+  }, [settings, originalSettings]);
+
+  // Tema ayarlarını gerçek zamanlı uygula
+  useEffect(() => {
+    if (settings.appearance) {
+      // Tema değişikliği
+      document.documentElement.setAttribute('data-theme', settings.appearance.theme);
+      
+      // Kompakt mod değişikliği
+      document.documentElement.setAttribute('data-compact', settings.appearance.compactMode.toString());
+      
+      // Vurgu rengi değişikliği
+      document.documentElement.style.setProperty('--color-primary', settings.appearance.accentColor);
+      document.documentElement.style.setProperty('--color-primary-dark', settings.appearance.accentColor);
+    }
+  }, [settings.appearance]);
 
   const updateSetting = (section: keyof Settings, key: string, value: any) => {
     setSettings(prev => ({
@@ -163,6 +323,20 @@ const Settings: React.FC = () => {
     }
   };
 
+  // Sayfa değişikliği sırasında uyarı göster
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (hasUnsavedChanges) {
+        e.preventDefault();
+        e.returnValue = 'Kaydedilmemiş değişiklikleriniz var. Çıkmak istediğinizden emin misiniz?';
+        return e.returnValue;
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [hasUnsavedChanges]);
+
   const tabs = [
     { id: 'general', name: 'Genel', icon: '⚙️' },
     { id: 'services', name: 'Servisler', icon: '🔧' },
@@ -174,13 +348,34 @@ const Settings: React.FC = () => {
     <div className="settings-page">
       <div className="settings-header">
         <h1>Ayarlar</h1>
-        <button 
-          className="btn btn-primary"
-          onClick={saveSettings}
-          disabled={saving}
-        >
-          {saving ? 'Kaydediliyor...' : 'Kaydet'}
-        </button>
+        <div className="settings-actions">
+          {hasUnsavedChanges && (
+            <div className="unsaved-changes-warning">
+              <span>⚠️ Kaydedilmemiş değişiklikleriniz var</span>
+            </div>
+          )}
+          <button 
+            className="btn btn-secondary"
+            onClick={resetToDefaults}
+            disabled={saving}
+          >
+            Varsayılana Getir
+          </button>
+          <button 
+            className="btn btn-secondary"
+            onClick={discardChanges}
+            disabled={saving || !hasUnsavedChanges}
+          >
+            Değişiklikleri İptal Et
+          </button>
+          <button 
+            className={`btn ${hasUnsavedChanges ? 'btn-primary' : 'btn-disabled'}`}
+            onClick={saveSettings}
+            disabled={saving || !hasUnsavedChanges}
+          >
+            {saving ? 'Kaydediliyor...' : 'Kaydet'}
+          </button>
+        </div>
       </div>
 
       <div className="settings-content">
@@ -364,12 +559,17 @@ const Settings: React.FC = () => {
                     <label>Vurgu rengi</label>
                     <p>Uygulama genelinde kullanılacak vurgu rengini seçin</p>
                   </div>
-                  <input
-                    type="color"
-                    value={settings.appearance.accentColor}
-                    onChange={(e) => updateSetting('appearance', 'accentColor', e.target.value)}
-                    className="setting-color"
-                  />
+                  <div className="color-picker">
+                    {predefinedColors.map((color) => (
+                      <button
+                        key={color.value}
+                        className={`color-option ${settings.appearance.accentColor === color.value ? 'selected' : ''}`}
+                        style={{ backgroundColor: color.value }}
+                        onClick={() => updateSetting('appearance', 'accentColor', color.value)}
+                        title={color.name}
+                      />
+                    ))}
+                  </div>
                 </div>
 
                 <div className="setting-item">

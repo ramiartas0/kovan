@@ -28,16 +28,32 @@ const Dashboard: React.FC = () => {
     activePlugins: 0,
     systemHealth: 'excellent'
   });
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    loadDashboardData();
-    const interval = setInterval(loadDashboardData, 5000);
-    return () => clearInterval(interval);
+    // Main process'in hazır olmasını bekle
+    const waitForKovanAPI = () => {
+      if (window.kovanAPI && window.kovanAPI.system) {
+        loadDashboardData();
+        const interval = setInterval(loadDashboardData, 5000);
+        return () => clearInterval(interval);
+      } else {
+        // KovanAPI henüz hazır değil, 100ms sonra tekrar dene
+        setTimeout(waitForKovanAPI, 100);
+      }
+    };
+
+    waitForKovanAPI();
   }, []);
 
   const loadDashboardData = async () => {
     try {
+      // Main process'in hazır olup olmadığını kontrol et
+      if (!window.kovanAPI || !window.kovanAPI.system) {
+        console.warn('KovanAPI henüz hazır değil, tekrar deneniyor...');
+        return;
+      }
+
       // Gerçek sistem bilgilerini yükle
       const systemData = await window.kovanAPI.system.info();
       setSystemInfo({
@@ -67,6 +83,9 @@ const Dashboard: React.FC = () => {
     } catch (error) {
       console.error('Dashboard verileri yüklenirken hata:', error);
       // Hata durumunda varsayılan değerler kullan
+      // Main process henüz hazır olmayabilir, bu normal bir durum
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -99,7 +118,44 @@ const Dashboard: React.FC = () => {
     return `${secs}s`;
   };
 
+  /** Skeleton Loading Components */
+  const StatCardSkeleton = () => (
+    <div className="skeleton-stat-card">
+      <div className="skeleton skeleton-stat-icon"></div>
+      <div className="skeleton-stat-content">
+        <div className="skeleton skeleton-stat-title"></div>
+        <div className="skeleton skeleton-stat-value"></div>
+        <div className="skeleton skeleton-stat-bar"></div>
+      </div>
+    </div>
+  );
 
+  const QuickStatCardSkeleton = () => (
+    <div className="skeleton-quick-stat-card">
+      <div className="skeleton skeleton-quick-stat-icon"></div>
+      <div className="skeleton-quick-stat-info">
+        <div className="skeleton skeleton-quick-stat-title"></div>
+        <div className="skeleton skeleton-quick-stat-value"></div>
+      </div>
+    </div>
+  );
+
+  const QuickActionSkeleton = () => (
+    <div className="skeleton-quick-action-btn">
+      <div className="skeleton skeleton-quick-action-icon"></div>
+      <div className="skeleton skeleton-quick-action-text"></div>
+    </div>
+  );
+
+  const ActivityItemSkeleton = () => (
+    <div className="skeleton-activity-item">
+      <div className="skeleton skeleton-activity-icon"></div>
+      <div className="skeleton-activity-content">
+        <div className="skeleton skeleton-activity-title"></div>
+        <div className="skeleton skeleton-activity-time"></div>
+      </div>
+    </div>
+  );
 
   return (
     <div className="dashboard-page">
@@ -113,140 +169,184 @@ const Dashboard: React.FC = () => {
         </div>
       </div>
 
-      <div className="dashboard-grid">
-        {/* Sistem İstatistikleri */}
-        <div className="stats-section">
-          <h2>Sistem İstatistikleri</h2>
-          <div className="stats-grid">
-            <div className="stat-card">
-              <div className="stat-icon">🖥️</div>
-              <div className="stat-content">
-                <h3>CPU Kullanımı</h3>
-                <div className="stat-value">{systemInfo?.cpu?.toFixed(1) || '0.0'}%</div>
-                <div className="stat-bar">
-                  <div className="stat-bar-fill" style={{ width: `${systemInfo?.cpu || 0}%` }}></div>
+      {loading ? (
+        <div className="dashboard-grid">
+          {/* Sistem İstatistikleri Skeleton */}
+          <div className="stats-section">
+            <h2>Sistem İstatistikleri</h2>
+            <div className="stats-grid">
+              {[1, 2, 3, 4].map((index) => (
+                <StatCardSkeleton key={index} />
+              ))}
+            </div>
+          </div>
+
+          {/* Hızlı İstatistikler Skeleton */}
+          <div className="quick-stats-section">
+            <h2>Hızlı İstatistikler</h2>
+            <div className="quick-stats-grid">
+              {[1, 2, 3].map((index) => (
+                <QuickStatCardSkeleton key={index} />
+              ))}
+            </div>
+          </div>
+
+          {/* Hızlı Erişim Skeleton */}
+          <div className="quick-actions-section">
+            <h2>Hızlı Erişim</h2>
+            <div className="quick-actions-grid">
+              {[1, 2, 3, 4].map((index) => (
+                <QuickActionSkeleton key={index} />
+              ))}
+            </div>
+          </div>
+
+          {/* Son Aktiviteler Skeleton */}
+          <div className="recent-activities-section">
+            <h2>Son Aktiviteler</h2>
+            <div className="activities-list">
+              {[1, 2, 3].map((index) => (
+                <ActivityItemSkeleton key={index} />
+              ))}
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div className="dashboard-grid">
+          {/* Sistem İstatistikleri */}
+          <div className="stats-section">
+            <h2>Sistem İstatistikleri</h2>
+            <div className="stats-grid">
+              <div className="stat-card">
+                <div className="stat-icon">🖥️</div>
+                <div className="stat-content">
+                  <h3>CPU Kullanımı</h3>
+                  <div className="stat-value">{systemInfo?.cpu?.toFixed(1) || '0.0'}%</div>
+                  <div className="stat-bar">
+                    <div className="stat-bar-fill" style={{ width: `${systemInfo?.cpu || 0}%` }}></div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="stat-card">
+                <div className="stat-icon">💾</div>
+                <div className="stat-content">
+                  <h3>RAM Kullanımı</h3>
+                  <div className="stat-value">{systemInfo?.memory?.toFixed(1) || '0.0'}%</div>
+                  <div className="stat-bar">
+                    <div className="stat-bar-fill" style={{ width: `${systemInfo?.memory || 0}%` }}></div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="stat-card">
+                <div className="stat-icon">💿</div>
+                <div className="stat-content">
+                  <h3>Disk Kullanımı</h3>
+                  <div className="stat-value">{systemInfo?.disk?.toFixed(1) || '0.0'}%</div>
+                  <div className="stat-bar">
+                    <div className="stat-bar-fill" style={{ width: `${systemInfo?.disk || 0}%` }}></div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="stat-card">
+                <div className="stat-icon">⏱️</div>
+                <div className="stat-content">
+                  <h3>Çalışma Süresi</h3>
+                  <div className="stat-value">{formatUptime(systemInfo?.uptime || 0)}</div>
                 </div>
               </div>
             </div>
+          </div>
 
-            <div className="stat-card">
-              <div className="stat-icon">💾</div>
-              <div className="stat-content">
-                <h3>RAM Kullanımı</h3>
-                <div className="stat-value">{systemInfo?.memory?.toFixed(1) || '0.0'}%</div>
-                <div className="stat-bar">
-                  <div className="stat-bar-fill" style={{ width: `${systemInfo?.memory || 0}%` }}></div>
+          {/* Hızlı İstatistikler */}
+          <div className="quick-stats-section">
+            <h2>Hızlı İstatistikler</h2>
+            <div className="quick-stats-grid">
+              <div className="quick-stat-card">
+                <div className="quick-stat-icon">📁</div>
+                <div className="quick-stat-info">
+                  <h3>Toplam Proje</h3>
+                  <div className="quick-stat-value">{quickStats.totalProjects}</div>
+                </div>
+              </div>
+
+              <div className="quick-stat-card">
+                <div className="quick-stat-icon">⚙️</div>
+                <div className="quick-stat-info">
+                  <h3>Çalışan Servis</h3>
+                  <div className="quick-stat-value">{quickStats.runningServices}</div>
+                </div>
+              </div>
+
+              <div className="quick-stat-card">
+                <div className="quick-stat-icon">🔌</div>
+                <div className="quick-stat-info">
+                  <h3>Aktif Eklenti</h3>
+                  <div className="quick-stat-value">{quickStats.activePlugins}</div>
                 </div>
               </div>
             </div>
+          </div>
 
-            <div className="stat-card">
-              <div className="stat-icon">💿</div>
-              <div className="stat-content">
-                <h3>Disk Kullanımı</h3>
-                <div className="stat-value">{systemInfo?.disk?.toFixed(1) || '0.0'}%</div>
-                <div className="stat-bar">
-                  <div className="stat-bar-fill" style={{ width: `${systemInfo?.disk || 0}%` }}></div>
+          {/* Hızlı Erişim */}
+          <div className="quick-actions-section">
+            <h2>Hızlı Erişim</h2>
+            <div className="quick-actions-grid">
+              <button className="quick-action-btn" onClick={() => window.location.hash = '#/projects'}>
+                <div className="quick-action-icon">➕</div>
+                <span>Yeni Proje Ekle</span>
+              </button>
+              
+              <button className="quick-action-btn" onClick={() => window.location.hash = '#/services'}>
+                <div className="quick-action-icon">🚀</div>
+                <span>Tüm Servisleri Başlat</span>
+              </button>
+              
+              <button className="quick-action-btn" onClick={() => window.location.hash = '#/plugins'}>
+                <div className="quick-action-icon">🔌</div>
+                <span>Eklenti Yönetimi</span>
+              </button>
+              
+              <button className="quick-action-btn" onClick={() => window.location.hash = '#/settings'}>
+                <div className="quick-action-icon">⚙️</div>
+                <span>Ayarlar</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Son Aktiviteler */}
+          <div className="recent-activities-section">
+            <h2>Son Aktiviteler</h2>
+            <div className="activities-list">
+              <div className="activity-item">
+                <div className="activity-icon">📁</div>
+                <div className="activity-content">
+                  <div className="activity-title">Yeni proje eklendi</div>
+                  <div className="activity-time">2 dakika önce</div>
+                </div>
+              </div>
+              
+              <div className="activity-item">
+                <div className="activity-icon">⚙️</div>
+                <div className="activity-content">
+                  <div className="activity-title">Apache servisi başlatıldı</div>
+                  <div className="activity-time">5 dakika önce</div>
+                </div>
+              </div>
+              
+              <div className="activity-item">
+                <div className="activity-icon">🔌</div>
+                <div className="activity-content">
+                  <div className="activity-title">Yeni eklenti yüklendi</div>
+                  <div className="activity-time">1 saat önce</div>
                 </div>
               </div>
             </div>
-
-            <div className="stat-card">
-              <div className="stat-icon">⏱️</div>
-              <div className="stat-content">
-                <h3>Çalışma Süresi</h3>
-                <div className="stat-value">{formatUptime(systemInfo?.uptime || 0)}</div>
-              </div>
-            </div>
           </div>
         </div>
-
-        {/* Hızlı İstatistikler */}
-        <div className="quick-stats-section">
-          <h2>Hızlı İstatistikler</h2>
-          <div className="quick-stats-grid">
-            <div className="quick-stat-card">
-              <div className="quick-stat-icon">📁</div>
-              <div className="quick-stat-info">
-                <h3>Toplam Proje</h3>
-                <div className="quick-stat-value">{quickStats.totalProjects}</div>
-              </div>
-            </div>
-
-            <div className="quick-stat-card">
-              <div className="quick-stat-icon">⚙️</div>
-              <div className="quick-stat-info">
-                <h3>Çalışan Servis</h3>
-                <div className="quick-stat-value">{quickStats.runningServices}</div>
-              </div>
-            </div>
-
-            <div className="quick-stat-card">
-              <div className="quick-stat-icon">🔌</div>
-              <div className="quick-stat-info">
-                <h3>Aktif Eklenti</h3>
-                <div className="quick-stat-value">{quickStats.activePlugins}</div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Hızlı Erişim */}
-        <div className="quick-actions-section">
-          <h2>Hızlı Erişim</h2>
-          <div className="quick-actions-grid">
-            <button className="quick-action-btn" onClick={() => window.location.hash = '#/projects'}>
-              <div className="quick-action-icon">➕</div>
-              <span>Yeni Proje Ekle</span>
-            </button>
-            
-            <button className="quick-action-btn" onClick={() => window.location.hash = '#/services'}>
-              <div className="quick-action-icon">🚀</div>
-              <span>Tüm Servisleri Başlat</span>
-            </button>
-            
-            <button className="quick-action-btn" onClick={() => window.location.hash = '#/plugins'}>
-              <div className="quick-action-icon">🔌</div>
-              <span>Eklenti Yönetimi</span>
-            </button>
-            
-            <button className="quick-action-btn" onClick={() => window.location.hash = '#/settings'}>
-              <div className="quick-action-icon">⚙️</div>
-              <span>Ayarlar</span>
-            </button>
-          </div>
-        </div>
-
-        {/* Son Aktiviteler */}
-        <div className="recent-activities-section">
-          <h2>Son Aktiviteler</h2>
-          <div className="activities-list">
-            <div className="activity-item">
-              <div className="activity-icon">📁</div>
-              <div className="activity-content">
-                <div className="activity-title">Yeni proje eklendi</div>
-                <div className="activity-time">2 dakika önce</div>
-              </div>
-            </div>
-            
-            <div className="activity-item">
-              <div className="activity-icon">⚙️</div>
-              <div className="activity-content">
-                <div className="activity-title">Apache servisi başlatıldı</div>
-                <div className="activity-time">5 dakika önce</div>
-              </div>
-            </div>
-            
-            <div className="activity-item">
-              <div className="activity-icon">🔌</div>
-              <div className="activity-content">
-                <div className="activity-title">Yeni eklenti yüklendi</div>
-                <div className="activity-time">1 saat önce</div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+      )}
     </div>
   );
 };

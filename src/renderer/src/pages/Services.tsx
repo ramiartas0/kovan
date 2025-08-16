@@ -149,6 +149,32 @@ const Services: React.FC = () => {
 
   const closeInstallModal = () => setInstallModal({ isOpen: false, serviceName: '', serviceDisplayName: '' });
 
+  /** Skeleton Loading Component */
+  const ServiceSkeleton = () => (
+    <div className="skeleton-card">
+      <div className="skeleton-header">
+        <div className="service-info">
+          <div className="skeleton skeleton-icon"></div>
+          <div>
+            <div className="skeleton skeleton-title"></div>
+            <div className="skeleton skeleton-description"></div>
+            <div className="skeleton skeleton-version"></div>
+          </div>
+        </div>
+        <div className="skeleton skeleton-status"></div>
+      </div>
+      <div className="skeleton-meta">
+        <div className="skeleton skeleton-meta-item"></div>
+        <div className="skeleton skeleton-meta-item"></div>
+        <div className="skeleton skeleton-meta-item"></div>
+      </div>
+      <div className="skeleton-actions">
+        <div className="skeleton skeleton-button"></div>
+        <div className="skeleton skeleton-badge"></div>
+      </div>
+    </div>
+  );
+
   /** Yardımcı UI fonksiyonları */
   const getServiceIcon = (type: string) => {
     switch (type) {
@@ -181,10 +207,6 @@ const Services: React.FC = () => {
     }
   };
 
-  if (loading) {
-    return <div className="services-page"><div className="loading">Servisler yükleniyor...</div></div>;
-  }
-
   const installedServices = services.filter(s => s.installed);
   const uninstalledServices = services.filter(s => !s.installed);
 
@@ -208,120 +230,133 @@ const Services: React.FC = () => {
         </div>
       </div>
 
-      {/* Yüklü Servisler */}
-      {installedServices.length > 0 && (
+      {loading ? (
         <div className="services-section">
           <h2>Yüklü Servisler</h2>
           <div className="services-grid">
-            {installedServices.map((service) => {
-              const status = serviceStatuses.get(service.name);
-              const isRunning = status?.status === 'running';
-
-              return (
-                <div key={service.name} className="service-card">
-                  <div className="service-header">
-                    <div className="service-info">
-                      <span className="service-icon">{getServiceIcon(service.type)}</span>
-                      <div>
-                        <h3>{service.displayName}</h3>
-                        <p className="service-description">{service.description}</p>
-                        {service.version && <span className="service-version">v{service.version}</span>}
-                      </div>
-                    </div>
-                    <div className="service-status">
-                      <span className="status-indicator" style={{ backgroundColor: getStatusColor(status?.status || 'stopped') }} />
-                      <span className="status-text">{getStatusText(status?.status || 'stopped')}</span>
-                    </div>
-                  </div>
-
-                  <div className="service-details">
-                    <div className="service-meta">
-                      <span className="service-type">{service.type}</span>
-                      {service.port && <span className="service-port">Port: {service.port}</span>}
-                      {status?.pid && <span className="service-pid">PID: {status.pid}</span>}
-                    </div>
-
-                    {status?.memory && (
-                      <div className="service-metrics">
-                        <span>RAM: {Math.round(status.memory / 1024 / 1024)}MB</span>
-                        {status.cpu && <span>CPU: {status.cpu.toFixed(1)}%</span>}
-                      </div>
-                    )}
-
-                    {status?.lastError && <div className="service-error"><span>Hata: {status.lastError}</span></div>}
-                  </div>
-
-                  <div className="service-actions">
-                    {isRunning ? (
-                      <button className="btn btn-danger" onClick={() => handleStopService(service.name)} disabled={status?.status === 'stopping'}>
-                        {status?.status === 'stopping' ? 'Durduruluyor...' : 'Durdur'}
-                      </button>
-                    ) : (
-                      <button className="btn btn-primary" onClick={() => handleStartService(service.name)} disabled={status?.status === 'starting'}>
-                        {status?.status === 'starting' ? 'Başlatılıyor...' : 'Başlat'}
-                      </button>
-                    )}
-                    {service.autoStart && <span className="auto-start-badge">Otomatik Başlat</span>}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* Kurulabilir Servisler */}
-      {showAllServices && uninstalledServices.length > 0 && (
-        <div className="services-section">
-          <h2>Kurulabilir Servisler</h2>
-          <div className="services-grid">
-            {uninstalledServices.map((service) => (
-              <div key={service.name} className="service-card service-card-uninstalled">
-                <div className="service-header">
-                  <div className="service-info">
-                    <span className="service-icon">{getServiceIcon(service.type)}</span>
-                    <div>
-                      <h3>{service.displayName}</h3>
-                      <p className="service-description">{service.description}</p>
-                      {service.version && <span className="service-version">v{service.version}</span>}
-                    </div>
-                  </div>
-                  <div className="service-status">
-                    <span className="status-indicator" style={{ backgroundColor: 'var(--color-text-tertiary)' }} />
-                    <span className="status-text">Yüklü Değil</span>
-                  </div>
-                </div>
-
-                <div className="service-details">
-                  <div className="service-meta">
-                    <span className="service-type">{service.type}</span>
-                    {service.port && <span className="service-port">Port: {service.port}</span>}
-                  </div>
-                </div>
-
-                <div className="service-actions">
-                  <button className="btn btn-primary" onClick={() => handleDownloadService(service.name)}>
-                    📦 Kur
-                  </button>
-                </div>
-              </div>
+            {[1, 2, 3, 4].map((index) => (
+              <ServiceSkeleton key={index} />
             ))}
           </div>
         </div>
-      )}
+      ) : (
+        <>
+          {/* Yüklü Servisler */}
+          {installedServices.length > 0 && (
+            <div className="services-section">
+              <h2>Yüklü Servisler</h2>
+              <div className="services-grid">
+                {installedServices.map((service) => {
+                  const status = serviceStatuses.get(service.name);
+                  const isRunning = status?.status === 'running';
 
-      {/* Boş state */}
-      {installedServices.length === 0 && !showAllServices && (
-        <div className="services-empty">
-          <div className="empty-state">
-            <span className="empty-icon">🔧</span>
-            <h3>Henüz Hiç Servis Yüklü Değil</h3>
-            <p>Geliştirme ortamınız için servisleri indirip kurabilirsiniz.</p>
-            <button className="btn btn-primary" onClick={() => setShowAllServices(true)}>
-              Servisleri Görüntüle
-            </button>
-          </div>
-        </div>
+                  return (
+                    <div key={service.name} className="service-card">
+                      <div className="service-header">
+                        <div className="service-info">
+                          <span className="service-icon">{getServiceIcon(service.type)}</span>
+                          <div>
+                            <h3>{service.displayName}</h3>
+                            <p className="service-description">{service.description}</p>
+                            {service.version && <span className="service-version">v{service.version}</span>}
+                          </div>
+                        </div>
+                        <div className="service-status">
+                          <span className="status-indicator" style={{ backgroundColor: getStatusColor(status?.status || 'stopped') }} />
+                          <span className="status-text">{getStatusText(status?.status || 'stopped')}</span>
+                        </div>
+                      </div>
+
+                      <div className="service-details">
+                        <div className="service-meta">
+                          <span className="service-type">{service.type}</span>
+                          {service.port && <span className="service-port">Port: {service.port}</span>}
+                          {status?.pid && <span className="service-pid">PID: {status.pid}</span>}
+                        </div>
+
+                        {status?.memory && (
+                          <div className="service-metrics">
+                            <span>RAM: {Math.round(status.memory / 1024 / 1024)}MB</span>
+                            {status.cpu && <span>CPU: {status.cpu.toFixed(1)}%</span>}
+                          </div>
+                        )}
+
+                        {status?.lastError && <div className="service-error"><span>Hata: {status.lastError}</span></div>}
+                      </div>
+
+                      <div className="service-actions">
+                        {isRunning ? (
+                          <button className="btn btn-danger" onClick={() => handleStopService(service.name)} disabled={status?.status === 'stopping'}>
+                            {status?.status === 'stopping' ? 'Durduruluyor...' : 'Durdur'}
+                          </button>
+                        ) : (
+                          <button className="btn btn-primary" onClick={() => handleStartService(service.name)} disabled={status?.status === 'starting'}>
+                            {status?.status === 'starting' ? 'Başlatılıyor...' : 'Başlat'}
+                          </button>
+                        )}
+                        {service.autoStart && <span className="auto-start-badge">Otomatik Başlat</span>}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Kurulabilir Servisler */}
+          {showAllServices && uninstalledServices.length > 0 && (
+            <div className="services-section">
+              <h2>Kurulabilir Servisler</h2>
+              <div className="services-grid">
+                {uninstalledServices.map((service) => (
+                  <div key={service.name} className="service-card service-card-uninstalled">
+                    <div className="service-header">
+                      <div className="service-info">
+                        <span className="service-icon">{getServiceIcon(service.type)}</span>
+                        <div>
+                          <h3>{service.displayName}</h3>
+                          <p className="service-description">{service.description}</p>
+                          {service.version && <span className="service-version">v{service.version}</span>}
+                        </div>
+                      </div>
+                      <div className="service-status">
+                        <span className="status-indicator" style={{ backgroundColor: 'var(--color-text-tertiary)' }} />
+                        <span className="status-text">Yüklü Değil</span>
+                      </div>
+                    </div>
+
+                    <div className="service-details">
+                      <div className="service-meta">
+                        <span className="service-type">{service.type}</span>
+                        {service.port && <span className="service-port">Port: {service.port}</span>}
+                      </div>
+                    </div>
+
+                    <div className="service-actions">
+                      <button className="btn btn-primary" onClick={() => handleDownloadService(service.name)}>
+                        📦 Kur
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Boş state */}
+          {installedServices.length === 0 && !showAllServices && (
+            <div className="services-empty">
+              <div className="empty-state">
+                <span className="empty-icon">🔧</span>
+                <h3>Henüz Hiç Servis Yüklü Değil</h3>
+                <p>Geliştirme ortamınız için servisleri indirip kurabilirsiniz.</p>
+                <button className="btn btn-primary" onClick={() => setShowAllServices(true)}>
+                  Servisleri Görüntüle
+                </button>
+              </div>
+            </div>
+          )}
+        </>
       )}
 
       {/* Modal */}

@@ -1,11 +1,11 @@
 {
-  "name": "kovan",
-  "version": "1.0.0",
+  "name": "KOVAN",
+  "version": "1.1.0",
   "description": "Laragon'dan daha güçlü, çapraz platform destekli lokal geliştirme ortamı",
   "main": "dist/main/main.js",
   "author": {
     "name": "Kovan Team",
-    "email": "support@kovan.dev"
+    "email": "ramiartas0@gmail.com"
   },
   "license": "MIT",
   "keywords": [
@@ -42,7 +42,7 @@
     "@types/react": "^18.2.37",
     "@types/react-dom": "^18.2.15",
     "adm-zip": "^0.5.16",
-    "better-sqlite3": "^9.2.2",
+    "better-sqlite3": "^9.6.0",
     "chokidar": "^3.5.3",
     "cross-spawn": "^7.0.3",
     "dockerode": "^4.0.2",
@@ -55,6 +55,7 @@
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-router-dom": "^6.20.0",
+    "sqlite3": "^5.1.7",
     "typescript": "^5.2.2"
   },
   "devDependencies": {

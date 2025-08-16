@@ -1,4 +1,5 @@
 import React from 'react';
+import { useAppInfo } from '../hooks/useAppInfo';
 import './Header.css';
 
 interface HeaderProps {
@@ -6,6 +7,8 @@ interface HeaderProps {
 }
 
 const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
+  const { name, version, versionWithName } = useAppInfo();
+
   return (
     <header className="header">
       <div className="header-left">
@@ -18,7 +21,7 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
         </button>
         
         <div className="breadcrumb">
-          <span className="breadcrumb-item">Kovan</span>
+          <span className="breadcrumb-item">{name}</span>
           <span className="breadcrumb-separator">/</span>
           <span className="breadcrumb-item">Dashboard</span>
         </div>
@@ -29,8 +32,8 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
           <span className="platform-icon" title="Platform: Windows">
             🪟
           </span>
-          <span className="version-info" title="Kovan v1.0.0">
-            v1.0.0
+          <span className="version-info" title={versionWithName}>
+            v{version}
           </span>
         </div>
 

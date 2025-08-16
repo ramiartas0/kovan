@@ -4,9 +4,11 @@
   justify-content: space-between;
   padding: 0 var(--space-6);
   height: 64px;
-  background: var(--bg-secondary);
-  border-bottom: 1px solid var(--border-primary);
+  background: var(--header-bg);
+  border-bottom: 1px solid var(--header-border);
   box-shadow: var(--shadow-sm);
+  position: relative;
+  z-index: 100; /* Title bar'dan düşük ama diğer elementlerden yüksek */
 }
 
 .header-left {
@@ -18,7 +20,7 @@
 .menu-button {
   background: none;
   border: none;
-  color: var(--text-secondary);
+  color: var(--header-text);
   font-size: var(--font-size-xl);
   cursor: pointer;
   padding: var(--space-2);
@@ -33,7 +35,7 @@
 
 .menu-button:hover {
   background: var(--bg-hover);
-  color: var(--text-primary);
+  color: var(--header-text);
 }
 
 .menu-icon {
@@ -45,12 +47,12 @@
   align-items: center;
   gap: var(--space-2);
   font-size: var(--font-size-sm);
-  color: var(--text-secondary);
+  color: var(--header-text);
 }
 
 .breadcrumb-item {
   font-weight: var(--font-weight-medium);
-  color: var(--text-primary);
+  color: var(--header-text);
 }
 
 .breadcrumb-separator {
@@ -68,7 +70,7 @@
   align-items: center;
   gap: var(--space-2);
   padding: var(--space-2) var(--space-3);
-  background: var(--bg-tertiary);
+  background: var(--system-info-bg);
   border-radius: var(--radius-lg);
   border: 1px solid var(--border-primary);
 }
@@ -92,7 +94,7 @@
 .action-button {
   background: none;
   border: none;
-  color: var(--text-secondary);
+  color: var(--header-text);
   font-size: var(--font-size-lg);
   cursor: pointer;
   padding: var(--space-2);
@@ -107,7 +109,7 @@
 
 .action-button:hover {
   background: var(--bg-hover);
-  color: var(--text-primary);
+  color: var(--header-text);
 }
 
 .action-icon {

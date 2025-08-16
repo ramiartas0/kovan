@@ -48,13 +48,6 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onToggle }) => {
           <span className="logo-icon">🚀</span>
           {isOpen && <span className="logo-text">Kovan</span>}
         </div>
-        <button 
-          className="sidebar-toggle"
-          onClick={onToggle}
-          aria-label={isOpen ? 'Sidebar\'ı kapat' : 'Sidebar\'ı aç'}
-        >
-          {isOpen ? '◀' : '▶'}
-        </button>
       </div>
 
       <nav className="sidebar-nav">
@@ -75,15 +68,6 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, onToggle }) => {
           ))}
         </ul>
       </nav>
-
-      {isOpen && (
-        <div className="sidebar-footer">
-          <div className="sidebar-info">
-            <p className="version">v1.0.0</p>
-            <p className="status">Çevrimiçi</p>
-          </div>
-        </div>
-      )}
     </aside>
   );
 };

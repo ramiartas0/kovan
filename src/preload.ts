@@ -33,6 +33,9 @@ contextBridge.exposeInMainWorld('kovanAPI', {
     get: () => ipcRenderer.invoke('settings:get'),
     save: (settings: any) => ipcRenderer.invoke('settings:save', settings),
   },
+  database: {
+    backup: (backupPath: string) => ipcRenderer.invoke('database:backup', backupPath),
+  },
   file: {
     selectDirectory: () => ipcRenderer.invoke('file:select-directory'),
     selectFile: (options?: any) => ipcRenderer.invoke('file:select-file', options),
